@@ -14,7 +14,7 @@ public class Logger
     private String logMessage =
             ChatColor.DARK_GREEN + "[DynamicTrees]" +
             ChatColor.RED +  " [%s]" +
-            ChatColor.AQUA  + "%s";
+            ChatColor.AQUA  + " %s";
 
     private Logger()
     {
