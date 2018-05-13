@@ -1,0 +1,10 @@
+name: DynamicTrees
+version: 0.1
+main: net.ddns.kiro47.dynamictrees.DynamicTreesMain
+author: Kiro47
+Description: Handles dynamic tree felling
+
+commands:
+  dyntrees:
+    usage: /<command>
+    description: General usage and help menu
