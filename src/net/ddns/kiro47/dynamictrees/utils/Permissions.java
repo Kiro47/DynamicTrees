@@ -1,4 +1,4 @@
-package net.ddns.kiro47.dynamictrees;
+package net.ddns.kiro47.dynamictrees.utils;
 
 public enum Permissions
 {

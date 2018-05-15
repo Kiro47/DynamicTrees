@@ -1,6 +1,7 @@
 package net.ddns.kiro47.dynamictrees;
 
 import net.ddns.kiro47.dynamictrees.utils.ConfigurationManager;
+import net.ddns.kiro47.dynamictrees.utils.Permissions;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;

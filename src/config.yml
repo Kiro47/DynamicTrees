@@ -10,3 +10,16 @@
 ## Author: Kiro47
 ######################################################################################
 version: 0.1
+AutoReplant:
+  Enabled: true
+  # If there is a "tree" (Log or Sapling) within X of the floating sapling do
+  # not auto plant it. If at 0, always attempt to plant the sapling.
+  NearestTree: 0
+  # Maximum radial range for replanting
+  # 0 Allows for infinite range
+  # High ranges can result in possibly heavy lag spikes.
+  ReplantRange: 20
+  # Amount of seconds before the sapling will replant itself
+  # 0 Will cause it to attempt to replant immediately, however is not advised
+  # as it will become near impossible for players to pick them up.
+  ReplantTime: 5
