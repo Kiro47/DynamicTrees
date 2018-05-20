@@ -2,8 +2,6 @@ package net.ddns.kiro47.dynamictrees;
 
 import net.ddns.kiro47.dynamictrees.listeners.TreeReplanter;
 import net.ddns.kiro47.dynamictrees.utils.Configurations;
-import org.bukkit.configuration.Configuration;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
