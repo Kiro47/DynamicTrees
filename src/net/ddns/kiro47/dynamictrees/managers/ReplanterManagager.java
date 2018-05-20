@@ -8,24 +8,21 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.material.Sapling;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitScheduler;
 
-import javax.swing.text.MutableAttributeSet;
-import java.util.HashMap;
-import java.util.Stack;
+import java.util.LinkedList;
 
 public class ReplanterManagager
 {
 
     /**
-     * Entity Stack of saplings, need to keep as an entity as we need access to lived ticks
+     * Entity Linked List of saplings, need to keep as an entity as we need access to lived ticks
      */
-    private Stack<Entity> stack;
+    private LinkedList<Entity> list;
 
-    /*
-     * Materials that a sapling can grow on
-     * COARSE_DIRT and PODZOL are included as DIRT with metadata
-     */
+    private boolean schedulerRunning = false;
+
     private static ReplanterManagager instance = new ReplanterManagager();
 
     public static ReplanterManagager getInstance()
@@ -35,44 +32,72 @@ public class ReplanterManagager
 
     private ReplanterManagager()
     {
-        this.stack = new Stack();
+        this.list = new LinkedList<>();
     }
 
-    public void addItem(Entity entity)
+    /**
+     *
+     * Adds a sapling entity to the list to be replanted
+     *
+     * @param entity  Sapling entity to be replanted.
+     *                This is expected to be a sapling if not it will cause issues.
+     */
+    public static void addItem(Entity entity)
     {
-        this.stack.push(entity);
+        // decided on addLast instead of add as it is void
+        // and there's no need for a return bool
+        instance.list.addLast(entity);
     }
 
-    private class replantScheduler extends BukkitRunnable
+    /**
+     * Starts the replant scheduler
+     *
+     */
+    public void startScheduler(Plugin plugin)
+    {
+        if (!(schedulerRunning))
+        {
+
+            BukkitScheduler scheduler = plugin.getServer().getScheduler();
+            scheduler.scheduleSyncRepeatingTask(
+                    plugin,
+                    new ReplantScheduler(),
+                    100,
+                    Configurations.REPLANT_TIME
+                    );
+            schedulerRunning = true;
+        }
+    }
+
+    private class ReplantScheduler implements Runnable
     {
 
-        /*
-         *   Dev Thoughts:
-         *   These maps are used to prevent constant duplicate checking
-         *   of spaces, which will signifcantly lower overhead over time
-         *   on check beyond a few blocks range.  However, the extra object
-         *   instantion could also cause poor memory as often times saplings
-         *   would drop in a perfectly acceptable place or directly next to one.
-         *   This caching method should probably be tested to determine if
-         *   the caching is good in the long run as most replant evals are
-         *   likely going to be short range.
+        /**
+         * Runnable that executes a replant
          */
-        private HashMap<Location, Boolean> hasSapling = new HashMap<>();
-        private HashMap<Location, Boolean> isValid = new HashMap<>();
-
-        @Override
         public void run()
         {
-            for (Entity entity : stack)
+
+            // using normal for instead of for each to maintain a location control
+
+            for (int i = 0; i < list.size(); i++)
             {
+                Entity entity = list.get(i);
                 if (entity.getTicksLived() >= Configurations.REPLANT_TIME)
                 {
                     replant(entity);
+                    list.remove(i);
                 }
             }
+
         }
 
-        private void replant(Entity entity)
+        /**
+         * Begin proccess of evalulating places to replant the sapling into the ground
+         *
+         * @param entity The entity (which is a sapling) to be replanted
+         */
+        private void replant(Entity entity) throws ClassCastException
         {
             ItemStack itemStack = (ItemStack) entity;
             TreeSpecies species = ((Sapling) itemStack.getData()).getSpecies();
@@ -81,21 +106,28 @@ public class ReplanterManagager
 
             for (int i = 0; i < amount; i++)
             {
-                if (isValid(entity.getLocation()) && awayFromOthers(entity.getLocation()))
+                if (isValid(location))
                 {
-                    Sapling sapling = (Sapling)  entity;
-                    plant(entity.getLocation(), sapling.getSpecies());
+                    plant(location, species);
                 }
-                // calculate distance from existance
-                // If spot is empty plant();
-                //Configurations.REPLANT_RANGE;
-                //Configurations.NEAREST_TREE;
             }
         }
 
+        /**
+         * Plants a tree sapling at the specified location
+         *
+         * @param location Location to plant the sapling
+         * @param species Type of tree species to plant
+         */
         private void plant(Location location , TreeSpecies species)
         {
+            Block block = location.getBlock();
 
+            block.setType(Material.SAPLING);
+
+            Sapling sapling = (Sapling) block;
+
+            sapling.setSpecies(species);
         }
 
         /**
@@ -108,23 +140,28 @@ public class ReplanterManagager
         {
             // check cache
 
-            /**
+            /*
              * The "block" space where the sapling would go
              */
             Block space = location.getBlock();
 
-            if (!(space.equals(Material.AIR)))
+            if (!(space.getType().equals(Material.AIR)))
             {
                 return false;
             }
 
 
-            /**
+            /*
              * The block to be planted upon
              */
             Block plotBlock = location.subtract(0,1,0).getBlock();
 
-            if (!(plotBlock.equals(Material.GRASS) || plotBlock.equals(Material.DIRT)))
+            /*
+             * Materials that a sapling can grow on
+             * COARSE_DIRT and PODZOL are included as DIRT with metadata
+             * Grass path can't support trees surprisingly
+             */
+            if (!(plotBlock.getType().equals(Material.GRASS) || plotBlock.getType().equals(Material.DIRT)))
             {
                 return false;
             }
@@ -132,33 +169,5 @@ public class ReplanterManagager
             return true;
         }
 
-        private boolean awayFromOthers(Location location)
-        {
-            // check cache
-
-            int nearestTreeRange = Configurations.NEAREST_TREE;
-            int range = Configurations.REPLANT_RANGE;
-
-            Stack<Location> radialSelection = new Stack();
-
-            for (int i = 0, j = i + 1 ; i < nearestTreeRange; i++ )
-            {
-                // clockwise grab
-                radialSelection.add(location.add(1, 0, 1));
-                radialSelection.add(location.add(0, 0, 1));
-                radialSelection.add(location.add(-1, 0, 1));
-                radialSelection.add(location.add(-1, 0, 0));
-                radialSelection.add(location.add(-1, 0, -1));
-                radialSelection.add(location.add(0, 0, -1));
-                radialSelection.add(location.add(1, 0, -1));
-                radialSelection.add(location.add(1, 0, 0));
-            }
-
-            for (Location checkLocation : radialSelection)
-            {
-                // check if contains sapling or log
-            }
-
-        }
     }
 }
